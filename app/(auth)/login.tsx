@@ -1,200 +1,176 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TouchableOpacity, 
-  Alert, 
-  Animated, 
+import React, { useState, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
   Platform,
-  ActivityIndicator
+  KeyboardAvoidingView,
+  ScrollView,
+  ViewStyle,
+  TextStyle,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Phone, ArrowLeft, ArrowRight } from 'lucide-react-native';
+import Animated, {
+  FadeIn,
+  FadeOut,
+  SlideInRight,
+  SlideOutLeft,
+} from 'react-native-reanimated';
 import { Input } from '@/components/Input';
 import { Button } from '@/components/Button';
-import { colors } from '@/constants/colors';
-import { useAuthStore } from '@/store/auth-store';
+import { colors, typography, spacing, layout } from '@/constants/theme';
+import { useAuthStore } from '../../store';
+
+const AnimatedView = Animated.createAnimatedComponent(View);
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { login, error, clearError, isLoading, isAuthenticated } = useAuthStore();
+  const { login, error, clearError, isLoading } = useAuthStore();
   const [phone, setPhone] = useState('');
   const [phoneError, setPhoneError] = useState('');
-  const [isNavigationReady, setIsNavigationReady] = useState(false);
-  
-  // Animation values
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
 
-  // Set navigation ready after first render
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsNavigationReady(true);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, []);
-  
-  // Start animations when component mounts
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: Platform.OS !== 'web',
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 600,
-        useNativeDriver: Platform.OS !== 'web',
-      }),
-    ]).start();
-  }, []);
-
-  // Redirect if authenticated
-  useEffect(() => {
-    if (isAuthenticated && isNavigationReady) {
-      // Use a timeout to ensure navigation happens after render cycle
-      const timer = setTimeout(() => {
-        router.replace('/(tabs)');
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [isAuthenticated, isNavigationReady, router]);
-
-  const validate = () => {
+  const validate = useCallback(() => {
     if (!phone) {
       setPhoneError('Phone number is required');
       return false;
-    } else if (!/^\d{10}$/.test(phone)) {
+    }
+    
+    // Remove all non-numeric characters for validation
+    const cleaned = phone.replace(/\D/g, '');
+    if (cleaned.length !== 10) {
       setPhoneError('Please enter a valid 10-digit phone number');
       return false;
     }
     
     setPhoneError('');
     return true;
-  };
+  }, [phone]);
 
-  const handleLogin = async () => {
-    if (!validate() || !isNavigationReady) return;
+  const handleLogin = useCallback(async () => {
+    if (!validate()) return;
     
     try {
-      // For demo purposes, we'll skip the actual login API call
-      // and go directly to OTP verification
+      await login('+1' + phone.replace(/\D/g, ''));
       router.push({
         pathname: '/otp',
-        params: { phone }
+        params: { phone: '+1' + phone.replace(/\D/g, '') }
       });
     } catch (err) {
-      // Error is handled in the store
       console.error(err);
     }
-  };
+  }, [phone, login, router, validate]);
 
-  const handleSignup = () => {
-    if (isNavigationReady) {
-      router.push('/signup');
-    }
-  };
+  const handleSignup = useCallback(() => {
+    router.push('/signup');
+  }, [router]);
 
-  const handleGoBack = () => {
-    if (isNavigationReady) {
-      router.back();
-    }
-  };
+  const handleGoBack = useCallback(() => {
+    router.back();
+  }, [router]);
 
   // Clear any store errors when component unmounts
-  useEffect(() => {
+  React.useEffect(() => {
     return () => {
       clearError();
     };
   }, [clearError]);
 
   // Show error alert if there's an error from the store
-  useEffect(() => {
+  React.useEffect(() => {
     if (error) {
       Alert.alert('Error', error);
       clearError();
     }
   }, [error, clearError]);
 
-  if (isAuthenticated) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Redirecting to home...</Text>
-      </View>
-    );
-  }
-
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={handleGoBack}
-        >
-          <ArrowLeft size={24} color={colors.text} />
-        </TouchableOpacity>
-      </View>
-      
-      <Animated.View 
-        style={[
-          styles.content,
-          { 
-            opacity: fadeAnim,
-            transform: Platform.OS !== 'web' ? [{ translateY: slideAnim }] : undefined
-          }
-        ]}
+      <KeyboardAvoidingView 
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
-        <View style={styles.titleContainer}>
-          <Text style={styles.title}>Welcome Back</Text>
-          <Text style={styles.subtitle}>
-            Log in with your phone number to continue
-          </Text>
-        </View>
-        
-        <View style={styles.form}>
-          <Input
-            label="Phone Number"
-            placeholder="Enter your 10-digit phone number"
-            value={phone}
-            onChangeText={(text) => {
-              // Only allow digits and limit to 10 characters
-              const cleaned = text.replace(/[^0-9]/g, '').slice(0, 10);
-              setPhone(cleaned);
-              if (phoneError) setPhoneError('');
-            }}
-            error={phoneError}
-            keyboardType="phone-pad"
-            leftIcon={<Phone size={20} color={colors.textLight} />}
-          />
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <AnimatedView 
+            entering={FadeIn.duration(300)}
+            exiting={FadeOut.duration(300)}
+            style={styles.header}
+          >
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={handleGoBack}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <ArrowLeft size={24} color={colors.text} />
+            </TouchableOpacity>
+          </AnimatedView>
           
-          <Button
-            title="Continue"
-            onPress={handleLogin}
-            type="primary"
-            size="large"
-            loading={isLoading}
-            disabled={isLoading}
-            style={styles.button}
-            icon={<ArrowRight size={20} color="#FFFFFF" />}
-            iconPosition="right"
-          />
-          
-          <Text style={styles.helpText}>
-            You will receive a one-time password (OTP) on this number
-          </Text>
-        </View>
-        
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Don't have an account?</Text>
-          <TouchableOpacity onPress={handleSignup}>
-            <Text style={styles.footerLink}>Sign Up</Text>
-          </TouchableOpacity>
-        </View>
-      </Animated.View>
+          <AnimatedView 
+            entering={SlideInRight.duration(400).delay(100)}
+            exiting={SlideOutLeft.duration(300)}
+            style={styles.content}
+          >
+            <View style={styles.titleContainer}>
+              <Text style={styles.title}>Welcome Back</Text>
+              <Text style={styles.subtitle}>
+                Log in with your phone number to continue
+              </Text>
+            </View>
+            
+            <View style={styles.form}>
+              <Input
+                label="Phone Number"
+                placeholder="(555) 123-4567"
+                value={phone}
+                onChangeText={(text) => {
+                  setPhone(text);
+                  if (phoneError) setPhoneError('');
+                }}
+                error={phoneError}
+                keyboardType="phone-pad"
+                leftIcon={<Phone size={20} color={colors.textLight} />}
+                formatPhoneNumber
+                autoFocus
+              />
+              
+              <Button
+                title="Continue"
+                onPress={handleLogin}
+                variant="primary"
+                size="lg"
+                loading={isLoading}
+                disabled={isLoading}
+                style={styles.button}
+                icon={<ArrowRight size={20} color={colors.card} />}
+                iconPosition="right"
+                haptic
+              />
+              
+              <Text style={styles.helpText}>
+                You will receive a one-time password (OTP) on this number
+              </Text>
+            </View>
+            
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>Don't have an account?</Text>
+              <TouchableOpacity 
+                onPress={handleSignup}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Text style={styles.footerLink}>Sign Up</Text>
+              </TouchableOpacity>
+            </View>
+          </AnimatedView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -203,24 +179,20 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  loadingContainer: {
+  } as ViewStyle,
+  keyboardAvoidingView: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: colors.textLight,
-  },
+  } as ViewStyle,
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: spacing.xl,
+  } as ViewStyle,
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
+    paddingHorizontal: layout.screenPadding,
+    paddingVertical: spacing.md,
+  } as ViewStyle,
   backButton: {
     width: 40,
     height: 40,
@@ -242,52 +214,57 @@ const styles = StyleSheet.create({
         boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
       }
     }),
-  },
+  } as ViewStyle,
   content: {
     flex: 1,
-    padding: 24,
-  },
+    paddingHorizontal: layout.screenPadding,
+  } as ViewStyle,
   titleContainer: {
-    marginBottom: 40,
-  },
+    marginBottom: spacing.xl,
+  } as ViewStyle,
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
+    fontSize: typography.sizes.xxxl,
+    fontWeight: typography.weights.bold,
     color: colors.text,
-    marginBottom: 8,
-  },
+    marginBottom: spacing.xs,
+    fontFamily: typography.families.sans,
+  } as TextStyle,
   subtitle: {
-    fontSize: 16,
+    fontSize: typography.sizes.md,
     color: colors.textLight,
     lineHeight: 24,
-  },
+    fontFamily: typography.families.sans,
+  } as TextStyle,
   form: {
-    marginBottom: 40,
-  },
+    marginBottom: spacing.xl,
+  } as ViewStyle,
   button: {
-    marginTop: 24,
-    marginBottom: 16,
-  },
+    marginTop: spacing.lg,
+    marginBottom: spacing.md,
+  } as ViewStyle,
   helpText: {
-    fontSize: 14,
+    fontSize: typography.sizes.sm,
     color: colors.textLight,
     textAlign: 'center',
-  },
+    fontFamily: typography.families.sans,
+  } as TextStyle,
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 'auto',
-    paddingVertical: 16,
-  },
+    paddingVertical: spacing.md,
+  } as ViewStyle,
   footerText: {
-    fontSize: 14,
+    fontSize: typography.sizes.sm,
     color: colors.textLight,
-    marginRight: 4,
-  },
+    marginRight: spacing.xs,
+    fontFamily: typography.families.sans,
+  } as TextStyle,
   footerLink: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
     color: colors.primary,
-  },
+    fontFamily: typography.families.sans,
+  } as TextStyle,
 });

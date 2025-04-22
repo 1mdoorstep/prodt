@@ -4,8 +4,7 @@ import { Platform, View, StyleSheet, Modal, Text, TouchableOpacity, ActivityIndi
 import { Home, Briefcase, Users, MessageSquare, Settings } from 'lucide-react-native';
 import { colors } from '@/constants/colors';
 import { DemoButton } from '@/components/DemoButton';
-import { useDemoStore } from '@/store/demo-store';
-import { useAuthStore } from '@/store/auth-store';
+import { useDemoStore, useAuthStore } from '../../store';
 import { useRouter } from 'expo-router';
 import { RoleSelectionPopup } from '@/components/RoleSelectionPopup';
 

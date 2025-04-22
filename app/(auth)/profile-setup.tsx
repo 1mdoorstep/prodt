@@ -17,7 +17,7 @@ import { ArrowLeft, ArrowRight, Camera, MapPin, Briefcase, Award } from 'lucide-
 import { Input } from '@/components/Input';
 import { Button } from '@/components/Button';
 import { colors } from '@/constants/colors';
-import { useAuthStore } from '@/store/auth-store';
+import { useAuthStore } from '../../store';
 
 // Mock skills for worker role
 const SKILLS = [
@@ -30,16 +30,26 @@ export default function ProfileSetupScreen() {
   const router = useRouter();
   const { user, updateProfile, setHasSetupProfile, isLoading } = useAuthStore();
   
-  const [profilePicture, setProfilePicture] = useState(user?.profilePicture || '');
-  const [location, setLocation] = useState(user?.location || '');
-  const [bio, setBio] = useState('');
-  const [selectedSkills, setSelectedSkills] = useState<string[]>(user?.skills || []);
+  const [profilePicture, setProfilePicture] = useState<string>('');
+  const [location, setLocation] = useState<string>('');
+  const [bio, setBio] = useState<string>('');
+  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isNavigationReady, setIsNavigationReady] = useState(false);
   
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
+  
+  // Set initial values from user if available
+  useEffect(() => {
+    if (user) {
+      setProfilePicture(user.profilePicture || '');
+      setLocation(user.location || '');
+      setBio(user.bio || '');
+      setSelectedSkills(user.skills || []);
+    }
+  }, [user]);
   
   // Set navigation ready after first render
   useEffect(() => {
@@ -86,8 +96,9 @@ export default function ProfileSetupScreen() {
     try {
       // Update profile in store
       updateProfile({
-        profilePicture: profilePicture || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
+        profilePicture,
         location,
+        bio,
         skills: selectedSkills,
       });
       
@@ -191,7 +202,6 @@ export default function ProfileSetupScreen() {
               value={location}
               onChangeText={setLocation}
               leftIcon={<MapPin size={20} color={colors.textLight} />}
-              required
             />
             
             <Input
@@ -238,13 +248,13 @@ export default function ProfileSetupScreen() {
           <Button
             title={isSubmitting ? "Saving Profile..." : "Complete Setup"}
             onPress={handleSubmit}
-            type="primary"
-            size="large"
+            variant="primary"
+            size="lg"
             style={styles.button}
             disabled={isSubmitting || !location}
             icon={isSubmitting ? 
               <ActivityIndicator size="small" color="#FFFFFF" /> : 
-              <ArrowRight size={20} color="#FFFFFF" />
+              <ArrowRight size={20} color={colors.card} />
             }
             iconPosition="right"
           />

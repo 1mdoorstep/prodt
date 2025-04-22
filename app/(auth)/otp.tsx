@@ -1,64 +1,44 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TouchableOpacity, 
-  Alert, 
-  Animated, 
+import React, { useState, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
   Platform,
-  ActivityIndicator,
-  Keyboard
+  KeyboardAvoidingView,
+  ScrollView,
+  ViewStyle,
+  TextStyle,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, ArrowRight } from 'lucide-react-native';
+import Animated, {
+  FadeIn,
+  FadeOut,
+  SlideInRight,
+  SlideOutLeft,
+} from 'react-native-reanimated';
 import { OtpInput } from '@/components/OtpInput';
 import { Button } from '@/components/Button';
-import { colors } from '@/constants/colors';
-import { useAuthStore } from '@/store/auth-store';
+import { colors, typography, spacing, layout } from '@/constants/theme';
+import { useAuthStore } from '../../store';
+
+const AnimatedView = Animated.createAnimatedComponent(View);
 
 export default function OtpScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { phone, name, isSignup } = params;
   
-  const { verifyOtp, error, clearError, isLoading, isAuthenticated, updateProfile } = useAuthStore();
+  const { verifyOtp, error, clearError, isLoading, updateProfile } = useAuthStore();
   const [otp, setOtp] = useState('');
   const [timeLeft, setTimeLeft] = useState(30);
   const [isResending, setIsResending] = useState(false);
-  const [isNavigationReady, setIsNavigationReady] = useState(false);
-  
-  // Animation values
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
-
-  // Set navigation ready after first render
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsNavigationReady(true);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, []);
-  
-  // Start animations when component mounts
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: Platform.OS !== 'web',
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 600,
-        useNativeDriver: Platform.OS !== 'web',
-      }),
-    ]).start();
-  }, []);
 
   // Countdown timer
-  useEffect(() => {
+  React.useEffect(() => {
     if (timeLeft === 0) return;
     
     const timerId = setTimeout(() => {
@@ -68,158 +48,142 @@ export default function OtpScreen() {
     return () => clearTimeout(timerId);
   }, [timeLeft]);
 
-  // Redirect if authenticated
-  useEffect(() => {
-    if (isAuthenticated && isNavigationReady) {
-      // Use a timeout to ensure navigation happens after render cycle
-      const timer = setTimeout(() => {
-        router.replace('/(tabs)');
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [isAuthenticated, isNavigationReady, router]);
-
-  const handleVerify = async () => {
-    if (otp.length !== 4 || !isNavigationReady) return;
+  const handleVerify = useCallback(async () => {
+    if (otp.length !== 4) return;
     
     try {
-      // For demo purposes, we'll accept any 4-digit OTP
-      await verifyOtp(otp);
+      await verifyOtp(otp, String(phone));
       
       // If this is a signup, update the user profile with the name
       if (isSignup === 'true' && name) {
-        updateProfile({ name: String(name) });
+        await updateProfile({ name: String(name) });
       }
       
-      // Navigation will happen in the useEffect above
+      router.replace('/(tabs)');
     } catch (err) {
-      // Error is handled in the store
       console.error(err);
     }
-  };
+  }, [otp, phone, isSignup, name, verifyOtp, updateProfile, router]);
 
-  const handleResendOtp = () => {
+  const handleResendOtp = useCallback(async () => {
     if (timeLeft > 0) return;
     
     setIsResending(true);
     
-    // Simulate OTP resend
-    setTimeout(() => {
+    try {
+      const { login } = useAuthStore.getState();
+      await login(String(phone));
       setTimeLeft(30);
-      setIsResending(false);
       Alert.alert('OTP Sent', `A new OTP has been sent to ${phone}`);
-    }, 1500);
-  };
-
-  const handleGoBack = () => {
-    if (isNavigationReady) {
-      router.back();
+    } catch (err) {
+      Alert.alert('Error', 'Failed to resend OTP. Please try again.');
+    } finally {
+      setIsResending(false);
     }
-  };
+  }, [timeLeft, phone]);
+
+  const handleGoBack = useCallback(() => {
+    router.back();
+  }, [router]);
 
   // Clear any store errors when component unmounts
-  useEffect(() => {
+  React.useEffect(() => {
     return () => {
       clearError();
     };
   }, [clearError]);
 
   // Show error alert if there's an error from the store
-  useEffect(() => {
+  React.useEffect(() => {
     if (error) {
       Alert.alert('Error', error);
       clearError();
     }
   }, [error, clearError]);
 
-  // Dismiss keyboard when OTP is complete
-  useEffect(() => {
-    if (otp.length === 4) {
-      Keyboard.dismiss();
-    }
-  }, [otp]);
-
-  if (isAuthenticated) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Redirecting to home...</Text>
-      </View>
-    );
-  }
-
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={handleGoBack}
-        >
-          <ArrowLeft size={24} color={colors.text} />
-        </TouchableOpacity>
-      </View>
-      
-      <Animated.View 
-        style={[
-          styles.content,
-          { 
-            opacity: fadeAnim,
-            transform: Platform.OS !== 'web' ? [{ translateY: slideAnim }] : undefined
-          }
-        ]}
+      <KeyboardAvoidingView 
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
-        <View style={styles.titleContainer}>
-          <Text style={styles.title}>Verify OTP</Text>
-          <Text style={styles.subtitle}>
-            We've sent a verification code to {phone}
-          </Text>
-        </View>
-        
-        <View style={styles.otpContainer}>
-          <OtpInput
-            value={otp}
-            onChange={setOtp}
-            cellCount={4}
-            autoFocus
-          />
-          
-          <View style={styles.resendContainer}>
-            <Text style={styles.resendText}>
-              {timeLeft > 0 ? `Resend OTP in ${timeLeft}s` : "Didn't receive the OTP?"}
-            </Text>
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <AnimatedView 
+            entering={FadeIn.duration(300)}
+            exiting={FadeOut.duration(300)}
+            style={styles.header}
+          >
             <TouchableOpacity 
-              onPress={handleResendOtp}
-              disabled={timeLeft > 0 || isResending}
+              style={styles.backButton}
+              onPress={handleGoBack}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Text 
-                style={[
-                  styles.resendButton,
-                  (timeLeft > 0 || isResending) && styles.resendButtonDisabled
-                ]}
-              >
-                {isResending ? 'Sending...' : 'Resend OTP'}
-              </Text>
+              <ArrowLeft size={24} color={colors.text} />
             </TouchableOpacity>
-          </View>
-        </View>
-        
-        <View style={styles.footer}>
-          <Button
-            title="Verify & Continue"
-            onPress={handleVerify}
-            type="primary"
-            size="large"
-            loading={isLoading}
-            disabled={otp.length !== 4 || isLoading}
-            icon={<ArrowRight size={20} color="#FFFFFF" />}
-            iconPosition="right"
-          />
+          </AnimatedView>
           
-          <Text style={styles.helpText}>
-            For demo purposes, enter any 4-digit OTP (e.g., 1234)
-          </Text>
-        </View>
-      </Animated.View>
+          <AnimatedView 
+            entering={SlideInRight.duration(400).delay(100)}
+            exiting={SlideOutLeft.duration(300)}
+            style={styles.content}
+          >
+            <View style={styles.titleContainer}>
+              <Text style={styles.title}>Verify OTP</Text>
+              <Text style={styles.subtitle}>
+                We've sent a verification code to {phone}
+              </Text>
+            </View>
+            
+            <View style={styles.otpContainer}>
+              <OtpInput
+                value={otp}
+                onChange={setOtp}
+                cellCount={4}
+                autoFocus
+              />
+              
+              <View style={styles.resendContainer}>
+                <Text style={styles.resendText}>
+                  {timeLeft > 0 ? `Resend OTP in ${timeLeft}s` : "Didn't receive the OTP?"}
+                </Text>
+                <TouchableOpacity 
+                  onPress={handleResendOtp}
+                  disabled={timeLeft > 0 || isResending}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Text 
+                    style={[
+                      styles.resendButton,
+                      (timeLeft > 0 || isResending) && styles.resendButtonDisabled
+                    ]}
+                  >
+                    {isResending ? 'Sending...' : 'Resend OTP'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+            
+            <View style={styles.footer}>
+              <Button
+                title="Verify & Continue"
+                onPress={handleVerify}
+                variant="primary"
+                size="lg"
+                loading={isLoading}
+                disabled={otp.length !== 4 || isLoading}
+                icon={<ArrowRight size={20} color={colors.card} />}
+                iconPosition="right"
+                haptic
+              />
+            </View>
+          </AnimatedView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -228,24 +192,20 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  loadingContainer: {
+  } as ViewStyle,
+  keyboardAvoidingView: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: colors.textLight,
-  },
+  } as ViewStyle,
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: spacing.xl,
+  } as ViewStyle,
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
+    paddingHorizontal: layout.screenPadding,
+    paddingVertical: spacing.md,
+  } as ViewStyle,
   backButton: {
     width: 40,
     height: 40,
@@ -267,57 +227,55 @@ const styles = StyleSheet.create({
         boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
       }
     }),
-  },
+  } as ViewStyle,
   content: {
     flex: 1,
-    padding: 24,
-  },
+    paddingHorizontal: layout.screenPadding,
+  } as ViewStyle,
   titleContainer: {
-    marginBottom: 40,
-  },
+    marginBottom: spacing.xl,
+  } as ViewStyle,
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
+    fontSize: typography.sizes.xxxl,
+    fontWeight: typography.weights.bold,
     color: colors.text,
-    marginBottom: 8,
-  },
+    marginBottom: spacing.xs,
+    fontFamily: typography.families.sans,
+  } as TextStyle,
   subtitle: {
-    fontSize: 16,
+    fontSize: typography.sizes.md,
     color: colors.textLight,
     lineHeight: 24,
-  },
+    fontFamily: typography.families.sans,
+  } as TextStyle,
   otpContainer: {
     alignItems: 'center',
-    marginBottom: 40,
-  },
+    marginBottom: spacing.xl,
+  } as ViewStyle,
   resendContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 24,
-  },
+    marginTop: spacing.lg,
+  } as ViewStyle,
   resendText: {
-    fontSize: 14,
+    fontSize: typography.sizes.sm,
     color: colors.textLight,
-    marginRight: 4,
-  },
+    marginRight: spacing.xs,
+    fontFamily: typography.families.sans,
+  } as TextStyle,
   resendButton: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
     color: colors.primary,
-  },
+    fontFamily: typography.families.sans,
+  } as TextStyle,
   resendButtonDisabled: {
     color: colors.textLight,
     opacity: 0.6,
-  },
+  } as TextStyle,
   footer: {
     marginTop: 'auto',
-  },
-  helpText: {
-    fontSize: 12,
-    color: colors.textLight,
-    textAlign: 'center',
-    marginTop: 16,
-    fontStyle: 'italic',
-  },
+    paddingTop: spacing.xl,
+  } as ViewStyle,
 });

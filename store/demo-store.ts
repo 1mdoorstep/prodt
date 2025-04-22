@@ -17,6 +17,7 @@ interface DemoState {
   currentStep: DemoStep;
   completedSteps: DemoStep[];
   isFirstTime: boolean;
+  isFirstLaunch: boolean;
   
   // Actions
   toggleDemoMode: () => void;
@@ -24,6 +25,7 @@ interface DemoState {
   completeStep: (step: DemoStep) => void;
   resetDemo: () => void;
   setFirstTimeCompleted: () => void;
+  setIsFirstLaunch: (value: boolean) => void;
 }
 
 export const useDemoStore = create<DemoState>()(
@@ -33,6 +35,7 @@ export const useDemoStore = create<DemoState>()(
       currentStep: 'welcome',
       completedSteps: [],
       isFirstTime: true,
+      isFirstLaunch: true,
       
       toggleDemoMode: () => set((state) => ({ 
         isDemoMode: !state.isDemoMode,
@@ -51,10 +54,12 @@ export const useDemoStore = create<DemoState>()(
         completedSteps: []
       }),
       
-      setFirstTimeCompleted: () => set({ isFirstTime: false })
+      setFirstTimeCompleted: () => set({ isFirstTime: false }),
+      
+      setIsFirstLaunch: (value) => set({ isFirstLaunch: value })
     }),
     {
-      name: 'demo-store',
+      name: 'demo-storage',
       storage: createJSONStorage(() => AsyncStorage)
     }
   )

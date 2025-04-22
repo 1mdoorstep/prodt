@@ -17,7 +17,7 @@ import { User, Phone, Gift, ArrowLeft, ArrowRight, Globe } from 'lucide-react-na
 import { Input } from '@/components/Input';
 import { Button } from '@/components/Button';
 import { colors } from '@/constants/colors';
-import { useAuthStore } from '@/store/auth-store';
+import { useAuthStore } from '../../store';
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -127,8 +127,11 @@ export default function SignupScreen() {
     if (!validate() || !isNavigationReady) return;
     
     try {
-      // For demo purposes, we'll simulate signup and go directly to OTP verification
-      // In a real app, this would call an API to register the user
+      await signup({
+        name,
+        phone,
+        referralCode
+      });
       
       // Navigate to OTP screen with phone number
       router.push({
@@ -267,8 +270,8 @@ export default function SignupScreen() {
             <Button
               title="Sign Up"
               onPress={handleSignup}
-              type="primary"
-              size="large"
+              variant="primary"
+              size="lg"
               loading={isLoading}
               disabled={isLoading}
               style={styles.button}

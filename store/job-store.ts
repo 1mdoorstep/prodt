@@ -1,21 +1,26 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Job, JobCategory, JobStatus, JobType } from '@/types/job';
+import { Job, JobCategory, JobStatus, JobType, JobApplication, SkillCategory } from '@/types';
+import { apiClient } from '@/utils/api';
 
 interface JobState {
   jobs: Job[];
+  applications: JobApplication[];
+  selectedCategory: SkillCategory | null;
   isLoading: boolean;
   error: string | null;
   
   // Actions
-  fetchJobs: () => Promise<void>;
+  fetchJobs: (category?: SkillCategory) => Promise<void>;
   getJobById: (id: string) => Job | undefined;
   getJobsByCategory: (category: JobCategory) => Job[];
   getJobsByStatus: (status: JobStatus) => Job[];
   createJob: (job: Omit<Job, 'id' | 'createdAt' | 'status'>) => Promise<void>;
   updateJobStatus: (id: string, status: JobStatus) => Promise<void>;
-  applyToJob: (jobId: string) => Promise<void>;
+  applyForJob: (jobId: string) => Promise<void>;
+  setSelectedCategory: (category: SkillCategory) => void;
+  clearError: () => void;
 }
 
 // Mock data for jobs
@@ -232,18 +237,26 @@ export const useJobStore = create<JobState>()(
   persist(
     (set, get) => ({
       jobs: mockJobs,
+      applications: [],
+      selectedCategory: null,
       isLoading: false,
       error: null,
       
-      fetchJobs: async () => {
-        set({ isLoading: true, error: null });
+      fetchJobs: async (category?: SkillCategory) => {
         try {
-          // In a real app, this would be an API call
-          // For now, we'll just simulate a delay and return mock data
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          set({ jobs: mockJobs, isLoading: false });
-        } catch (error) {
-          set({ error: (error as Error).message, isLoading: false });
+          set({ isLoading: true, error: null });
+          const response = await apiClient.get<Job[]>('/jobs', {
+            params: { category },
+          });
+          set({
+            jobs: response.data,
+            isLoading: false,
+          });
+        } catch (error: any) {
+          set({
+            error: error.response?.data?.message || 'Failed to fetch jobs',
+            isLoading: false,
+          });
         }
       },
       
@@ -298,25 +311,27 @@ export const useJobStore = create<JobState>()(
         }
       },
       
-      applyToJob: async (jobId: string) => {
-        set({ isLoading: true, error: null });
+      applyForJob: async (jobId: string) => {
         try {
-          // In a real app, this would be an API call
-          await new Promise(resolve => setTimeout(resolve, 800));
-          
-          set(state => ({
-            jobs: state.jobs.map(job => 
-              job.id === jobId ? { 
-                ...job, 
-                applicationsCount: (job.applicationsCount || 0) + 1 
-              } : job
-            ),
-            isLoading: false
+          set({ isLoading: true, error: null });
+          const response = await apiClient.post<JobApplication>('/jobs/apply', { jobId });
+          set((state) => ({
+            applications: [...state.applications, response.data],
+            isLoading: false,
           }));
-        } catch (error) {
-          set({ error: (error as Error).message, isLoading: false });
+        } catch (error: any) {
+          set({
+            error: error.response?.data?.message || 'Failed to apply for job',
+            isLoading: false,
+          });
         }
-      }
+      },
+      
+      setSelectedCategory: (category: SkillCategory) => {
+        set({ selectedCategory: category });
+      },
+      
+      clearError: () => set({ error: null }),
     }),
     {
       name: 'job-store',

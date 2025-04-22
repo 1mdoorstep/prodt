@@ -15,9 +15,10 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react-native';
-import { colors } from '@/constants/colors';
+import { Input } from '@/components/Input';
 import { Button } from '@/components/Button';
-import { useAuthStore } from '@/store/auth-store';
+import { colors } from '@/constants/colors';
+import { useAuthStore } from '../../store';
 
 const LANGUAGES = [
   { id: 'en', name: 'English', localName: 'English' },
@@ -143,18 +144,20 @@ export default function LanguageSelectionScreen() {
               disabled={isLoading}
             >
               <View style={styles.languageInfo}>
-                <Text style={[
-                  styles.languageName,
-                  language === item.id && styles.selectedLanguageName
-                ]}>
-                  {item.name}
-                </Text>
-                <Text style={[
-                  styles.languageLocalName,
-                  language === item.id && styles.selectedLanguageLocalName
-                ]}>
-                  {item.localName}
-                </Text>
+                <View style={styles.languageNameContainer}>
+                  <Text style={[
+                    styles.languageName,
+                    language === item.id && styles.selectedLanguageName
+                  ]}>
+                    {item.name}
+                  </Text>
+                  <Text style={[
+                    styles.languageLocalName,
+                    language === item.id && styles.selectedLanguageLocalName
+                  ]}>
+                    {item.localName}
+                  </Text>
+                </View>
               </View>
               
               {language === item.id && (
@@ -169,13 +172,13 @@ export default function LanguageSelectionScreen() {
         <Button
           title={isLoading ? "Please wait..." : "Continue"}
           onPress={handleContinue}
-          type="primary"
-          size="large"
+          variant="primary"
+          size="lg"
           style={styles.button}
           disabled={isLoading}
           icon={isLoading ? 
             <ActivityIndicator size="small" color="#FFFFFF" /> : 
-            <ArrowRight size={20} color="#FFFFFF" />
+            <ArrowRight size={20} color={colors.card} />
           }
           iconPosition="right"
         />
@@ -317,5 +320,8 @@ const styles = StyleSheet.create({
   },
   button: {
     marginTop: 8,
+  },
+  languageNameContainer: {
+    flex: 1,
   },
 });

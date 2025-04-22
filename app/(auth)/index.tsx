@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowRight } from 'lucide-react-native';
 import { colors } from '@/constants/colors';
 import { Button } from '@/components/Button';
-import { useAuthStore } from '@/store/auth-store';
+import { useAuthStore, useDemoStore } from '../../store';
 import { OnboardingCarousel } from '@/components/OnboardingCarousel';
 
 export default function WelcomeScreen() {
@@ -98,6 +98,9 @@ export default function WelcomeScreen() {
         <OnboardingCarousel 
           onComplete={() => {
             setHasCompletedOnboarding(true);
+            if (isNavigationReady) {
+              router.push('/login');
+            }
           }}
           onSkip={handleSkip}
         />
@@ -133,8 +136,8 @@ export default function WelcomeScreen() {
             <Button
               title="Create an Account"
               onPress={handleSignup}
-              type="primary"
-              size="large"
+              variant="primary"
+              size="lg"
               style={styles.signupButton}
               icon={<ArrowRight size={20} color="#FFFFFF" />}
               iconPosition="right"

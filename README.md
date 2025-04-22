@@ -1,56 +1,95 @@
-# DriverConnect - Professional Driver Hiring App
+# Project X - Mobile App Prototype
 
-DriverConnect is a comprehensive mobile application that connects users with professional drivers and other service providers. The app allows users to search for professionals, view their profiles, chat with them, and hire them for jobs.
+A React Native mobile app prototype showcasing a platform connecting workers with job opportunities.
 
 ## Features
 
-- **User Authentication**: Secure login and signup with OTP verification
-- **Professional Search**: Find drivers and other professionals based on location, skills, and availability
-- **Real-time Chat**: Communicate with professionals directly through the app
-- **Job Posting**: Post jobs and receive applications from professionals
-- **Profile Management**: Create and manage detailed profiles with skills, vehicle types, and government verification
-- **Availability Management**: Professionals can set their availability status and working hours
-- **Rating System**: Rate and review professionals after service completion
-- **Dual Mode**: Switch between "Hire" and "Work" modes for different user experiences
+- 📱 Beautiful and modern UI with smooth animations
+- 🎨 Consistent design system with custom components
+- 🔐 Authentication flow (with mock data)
+- 👥 User profiles for workers and employers
+- 💼 Job listings and categories
+- 💬 Chat functionality (with mock conversations)
+- 📍 Location-based job search
+- ⭐ Ratings and reviews system
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js (v16 or later)
+- npm or yarn
+- Expo CLI
+- iOS Simulator or Android Emulator
+
+### Installation
+
+1. Clone the repository:
+
+```bash
+git clone https://github.com/yourusername/project-x.git
+cd project-x
+```
+
+1. Install dependencies:
+
+```bash
+npm install
+# or
+yarn install
+```
+
+1. Start the development server:
+
+```bash
+npm start
+# or
+yarn start
+```
+
+1. Open the app in your simulator/emulator or scan the QR code with Expo Go app on your device.
+
+## Demo Credentials
+
+For testing the prototype, use these credentials:
+
+- Phone: Any valid phone number
+- OTP: 1234 (mock verification code)
 
 ## Tech Stack
 
-- **Framework**: React Native with Expo
-- **State Management**: Zustand with AsyncStorage persistence
-- **Navigation**: Expo Router (file-based routing)
-- **UI Components**: Custom components with react-native StyleSheet
-- **Icons**: Lucide React Native
-- **Animations**: React Native Animated API
-- **Visual Effects**: Expo LinearGradient
+- React Native
+- Expo
+- TypeScript
+- Zustand (State Management)
+- React Navigation
+- React Native Reanimated
+- AsyncStorage
 
 ## Project Structure
 
-```
-/
-├── app/                    # Main application screens (Expo Router)
-│   ├── (auth)/             # Authentication screens
-│   ├── (tabs)/             # Tab navigation screens
-│   ├── chat/               # Chat screens
-│   ├── driver/             # Driver profile screens
-│   └── _layout.tsx         # Root layout with navigation setup
-├── assets/                 # Static assets (images, fonts)
-├── components/             # Reusable UI components
-├── constants/              # App constants (colors, etc.)
-├── hooks/                  # Custom React hooks
-├── store/                  # Zustand state management
-├── styles/                 # Shared styles
-├── types/                  # TypeScript type definitions
-└── utils/                  # Utility functions
-```
-
-## Installation
-
-1. Clone the repository:
-```bash
-git clone https://github.com/yourusername/driver-connect.git
-cd driver-connect
+```plaintext
+project-x/
+├── app/                   # App screens and navigation
+│   ├── (auth)/           # Authentication screens
+│   ├── (tabs)/           # Main tab screens
+│   ├── chat/             # Chat screens
+│   ├── job/              # Job related screens
+│   └── worker/           # Worker profile screens
+├── src/
+│   ├── components/       # Reusable components
+│   ├── constants/        # Theme and mock data
+│   ├── navigation/       # Navigation configuration
+│   ├── store/           # State management
+│   ├── types/           # TypeScript types
+│   └── utils/           # Utility functions
+└── assets/              # Images and fonts
 ```
 
-2. Install dependencies:
-```bash
-npm install
+## Contributing
+
+This is a prototype version for demonstration purposes. Feel free to fork and modify for your needs.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
